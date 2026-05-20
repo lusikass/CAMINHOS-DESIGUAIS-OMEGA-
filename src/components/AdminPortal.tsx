@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Trial } from '../types';
-import { Key, Save, Download, RefreshCw, AlertCircle, Sparkles, Filter, FileSpreadsheet, Trash2 } from 'lucide-react';
+import { Key, Save, Download, RefreshCw, AlertCircle, Sparkles, Filter, FileSpreadsheet, Trash2, Link2 } from 'lucide-react';
 
 interface AdminPortalProps {
   apiKey: string;
@@ -23,6 +23,7 @@ export default function AdminPortal({
 }: AdminPortalProps) {
   const [localKey, setLocalKey] = useState(apiKey);
   const [localModel, setLocalModel] = useState(aiModel);
+  const [sheetsUrl, setSheetsUrl] = useState(() => localStorage.getItem('bauhaus_sheets_url') || '');
   const [testResult, setTestResult] = useState<string | null>(null);
   const [testingKey, setTestingKey] = useState(false);
   const [filterQuery, setFilterQuery] = useState('');
@@ -32,8 +33,41 @@ export default function AdminPortal({
     setAiModel(localModel);
     localStorage.setItem('bauhaus_api_key', localKey);
     localStorage.setItem('bauhaus_ai_model', localModel);
+    localStorage.setItem('bauhaus_sheets_url', sheetsUrl);
     setTestResult('Configuração salva com sucesso no navegador.');
     setTimeout(() => setTestResult(null), 3500);
+  };
+
+  const testSheets = async () => {
+    if (!sheetsUrl) {
+      setTestResult('Erro: Por favor, insira a URL do Google Sheets antes de testar.');
+      return;
+    }
+    try {
+      await fetch(sheetsUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          id: 'TESTE_' + Date.now(),
+          timestamp: new Date().toLocaleString('pt-BR'),
+          duration: 0,
+          aiMode: 'Teste',
+          pre_q1: 'TESTE', pre_q2: 'TESTE', pre_q3: 'TESTE',
+          gender: 'TESTE', race: 'TESTE', comorbidity: 'TESTE',
+          path_key: 'TESTE', path_name: 'TESTE',
+          stat_conhecimento: 0, stat_exaustao: 0, stat_apoio: 0,
+          course_name: 'TESTE', course_desc: 'TESTE',
+          verdict: 'Linha de teste enviada do painel Admin',
+          post_q1: '', post_q2: '', post_q3: '', post_q4: '',
+          fase_1: '', fase_2: '', fase_3: '', fase_4: '', fase_5: '', fase_6: '', fase_7: '',
+        }),
+      });
+      setTestResult('Linha de teste enviada para o Sheets. Verifique sua planilha em alguns segundos.');
+      setTimeout(() => setTestResult(null), 5000);
+    } catch (err: any) {
+      setTestResult('Erro ao enviar teste: ' + (err.message || 'Verifique a URL.'));
+    }
   };
 
   const testConnection = async () => {
@@ -241,6 +275,65 @@ export default function AdminPortal({
               <strong>Nota acadêmica:</strong> DeepSeek é um modelo de IA de código aberto (MIT License), gratuito para uso acadêmico. O modo IA permite que consequências, dilemas e vereditos sejam gerados dinamicamente para cada resposta do participante.
             </div>
           </div>
+        </div>
+
+        {/* Section 1B: Google Sheets Integration */}
+        <div className="bg-[#fdfaf4] border-2 border-black p-4 flex flex-col gap-4">
+          <h3 className="font-bold text-lg text-black uppercase tracking-tight flex items-center gap-2 border-b-2 border-black pb-1">
+            <Link2 className="w-5 h-5 text-[#2c5f8a]" /> Integração com Google Sheets
+          </h3>
+
+          <div className="flex flex-col gap-2">
+            <label className="font-mono text-xs uppercase tracking-wider text-neutral-600 font-bold">
+              URL do Apps Script (Web App)
+            </label>
+            <input
+              type="text"
+              value={sheetsUrl}
+              onChange={e => setSheetsUrl(e.target.value)}
+              placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+              className="w-full border-2 border-black p-2 bg-[#f4f1ea] font-mono text-xs outline-none focus:border-[#2c5f8a]"
+            />
+            <p className="text-xs text-neutral-500 leading-relaxed font-sans">
+              Cole aqui a URL do seu Apps Script publicado como <strong>Web App</strong>.
+              Cada trajetória completada será enviada automaticamente como uma nova linha na sua planilha.
+              Veja as instruções de configuração no campo de Ajuda abaixo.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={saveConfig}
+              className="flex items-center justify-center gap-2 bg-[#1e1e1e] text-white border-2 border-black font-bold uppercase py-2 px-4 text-xs hover:bg-[#c0392b] transition cursor-pointer flex-1"
+            >
+              <Save className="w-4 h-4" /> Salvar URL
+            </button>
+            <button
+              onClick={testSheets}
+              disabled={!sheetsUrl}
+              className="flex items-center justify-center gap-2 bg-[#e8b84b] text-black border-2 border-black font-bold uppercase py-2 px-4 text-xs hover:bg-[#d4a73a] transition cursor-pointer flex-1 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className="w-4 h-4" /> Enviar Linha de Teste
+            </button>
+          </div>
+
+          <details className="bg-white border-2 border-dashed border-black/40 p-3 text-xs text-neutral-700 cursor-pointer">
+            <summary className="font-bold uppercase tracking-wider text-[10px] text-black">
+              📖 Como configurar a planilha (passo a passo)
+            </summary>
+            <ol className="list-decimal pl-5 mt-3 space-y-2 leading-relaxed text-[11px]">
+              <li>Crie uma nova planilha em <strong>sheets.google.com</strong></li>
+              <li>Vá em <strong>Extensões → Apps Script</strong></li>
+              <li>Apague o código existente e cole o código que está no arquivo <code className="bg-[#f4f1ea] px-1">README.md</code> do projeto</li>
+              <li>Clique em <strong>Implantar → Nova implantação</strong></li>
+              <li>Em "Tipo", escolha <strong>Web app</strong></li>
+              <li>Em "Quem pode acessar", escolha <strong>Qualquer pessoa</strong></li>
+              <li>Clique em <strong>Implantar</strong></li>
+              <li>Copie a URL gerada e cole no campo acima</li>
+              <li>Clique em <strong>Salvar URL</strong></li>
+              <li>Clique em <strong>Enviar Linha de Teste</strong> para confirmar</li>
+            </ol>
+          </details>
         </div>
 
         {/* Section 2: Data Dashboard */}

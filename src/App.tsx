@@ -11,6 +11,7 @@ import SisuSuspenseScene from './components/SisuSuspenseScene';
 import PostQuestionnaireScene from './components/PostQuestionnaireScene';
 import ThanksScene from './components/ThanksScene';
 import { generateAIPhase, generateAIVerdict } from './ai';
+import { sendTrialToSheets } from './sheets';
 import { Sparkles, BarChart2 } from 'lucide-react';
 
 type Scene = 'consent' | 'pre' | 'identity' | 'roulette' | 'game' | 'suspense' | 'post' | 'thanks';
@@ -215,6 +216,10 @@ export default function App() {
     const updatedTrials = [...trials, fullTrial];
     setTrials(updatedTrials);
     localStorage.setItem('bauhaus_trials', JSON.stringify(updatedTrials));
+
+    // Envia os dados para o Google Sheets (se a URL estiver configurada)
+    sendTrialToSheets(fullTrial).catch(err => console.error('Sheets error:', err));
+
     setActiveScene('thanks');
   };
 
